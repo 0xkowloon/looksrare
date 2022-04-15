@@ -336,4 +336,36 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
 
         noChangeAssertions();
     }
+
+    function testMakerAskBidTooLow() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        signOrder(makerAsk, 1);
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+        takerBid.price = 0.99 ether;
+
+        cheats.prank(buyer);
+        cheats.expectRevert(bytes("Strategy: Execution invalid"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAskBidTooLow() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+        takerAsk.price = 0.99 ether;
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Strategy: Execution invalid"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
 }
