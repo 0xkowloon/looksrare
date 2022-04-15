@@ -102,6 +102,44 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         testErc721.approve(address(transferManagerERC721), 0);
     }
 
+    function makerOrderStruct(bool isOrderAsk, address signer)
+        private
+        returns (OrderTypes.MakerOrder memory makerOrder)
+    {
+        makerOrder = OrderTypes.MakerOrder(
+            isOrderAsk,
+            signer,
+            address(testErc721),
+            1 ether,
+            0,
+            1,
+            address(strategy),
+            address(weth),
+            0,
+            block.timestamp,
+            block.timestamp + 86400,
+            minPercentageAsk,
+            "",
+            0,
+            "",
+            ""
+        );
+    }
+
+    function takerOrderStruct(bool isOrderAsk, address signer)
+        private
+        returns (OrderTypes.TakerOrder memory takerOrder)
+    {
+        takerOrder = OrderTypes.TakerOrder(
+            isOrderAsk,
+            signer,
+            1 ether,
+            0,
+            minPercentageAsk,
+            ""
+        );
+    }
+
     function makerOrderHash(OrderTypes.MakerOrder memory makerOrder)
         public
         pure
@@ -145,133 +183,61 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         makerOrder.s = s;
     }
 
-    function testMakerAskSuccess() public {
+    function initialAssertions() private {
         assertEq(testErc721.ownerOf(0), seller);
         assertEq(weth.balanceOf(seller), 0);
         assertEq(weth.balanceOf(buyer), 1 ether);
         assertEq(weth.balanceOf(protocolFeeRecipient), 0);
         assertEq(weth.balanceOf(royaltyFeeReceiver), 0);
+    }
 
-        OrderTypes.MakerOrder memory makerAsk = OrderTypes.MakerOrder(
-            true,
-            seller,
-            address(testErc721),
-            1 ether,
-            0,
-            1,
-            address(strategy),
-            address(weth),
-            0,
-            block.timestamp,
-            block.timestamp + 86400,
-            minPercentageAsk,
-            "",
-            0,
-            "",
-            ""
-        );
+    function noChangeAssertions() private {
+        initialAssertions();
+    }
+
+    function assetsChangedHandsAssertions() private {
+        assertEq(testErc721.ownerOf(0), buyer);
+        assertEq(weth.balanceOf(seller), 0.935 ether);
+        assertEq(weth.balanceOf(buyer), 0);
+        assertEq(weth.balanceOf(protocolFeeRecipient), 0.05 ether);
+        assertEq(weth.balanceOf(royaltyFeeReceiver), 0.015 ether);
+    }
+
+    function testMakerAskSuccess() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
         signOrder(makerAsk, 1);
 
-        OrderTypes.TakerOrder memory takerBid = OrderTypes.TakerOrder(
-            false,
-            buyer,
-            1 ether,
-            0,
-            minPercentageAsk,
-            ""
-        );
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
 
         cheats.prank(buyer);
         exchange.matchAskWithTakerBid(takerBid, makerAsk);
 
-        assertEq(testErc721.ownerOf(0), buyer);
-        assertEq(weth.balanceOf(seller), 0.935 ether);
-        assertEq(weth.balanceOf(buyer), 0);
-        assertEq(weth.balanceOf(protocolFeeRecipient), 0.05 ether);
-        assertEq(weth.balanceOf(royaltyFeeReceiver), 0.015 ether);
+        assetsChangedHandsAssertions();
     }
 
     function testTakerAskSuccess() public {
-        assertEq(testErc721.ownerOf(0), seller);
-        assertEq(weth.balanceOf(seller), 0);
-        assertEq(weth.balanceOf(buyer), 1 ether);
-        assertEq(weth.balanceOf(protocolFeeRecipient), 0);
-        assertEq(weth.balanceOf(royaltyFeeReceiver), 0);
+        initialAssertions();
 
-        OrderTypes.MakerOrder memory makerBid = OrderTypes.MakerOrder(
-            false,
-            buyer,
-            address(testErc721),
-            1 ether,
-            0,
-            1,
-            address(strategy),
-            address(weth),
-            0,
-            block.timestamp,
-            block.timestamp + 86400,
-            minPercentageAsk,
-            "",
-            0,
-            "",
-            ""
-        );
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
         signOrder(makerBid, 2);
 
-        OrderTypes.TakerOrder memory takerAsk = OrderTypes.TakerOrder(
-            true,
-            seller,
-            1 ether,
-            0,
-            minPercentageAsk,
-            ""
-        );
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
 
         cheats.prank(seller);
         exchange.matchBidWithTakerAsk(takerAsk, makerBid);
 
-        assertEq(testErc721.ownerOf(0), buyer);
-        assertEq(weth.balanceOf(seller), 0.935 ether);
-        assertEq(weth.balanceOf(buyer), 0);
-        assertEq(weth.balanceOf(protocolFeeRecipient), 0.05 ether);
-        assertEq(weth.balanceOf(royaltyFeeReceiver), 0.015 ether);
+        assetsChangedHandsAssertions();
     }
 
     function testMakerAskCancelled() public {
-        assertEq(testErc721.ownerOf(0), seller);
-        assertEq(weth.balanceOf(seller), 0);
-        assertEq(weth.balanceOf(buyer), 1 ether);
-        assertEq(weth.balanceOf(protocolFeeRecipient), 0);
-        assertEq(weth.balanceOf(royaltyFeeReceiver), 0);
+        initialAssertions();
 
-        OrderTypes.MakerOrder memory makerAsk = OrderTypes.MakerOrder(
-            true,
-            seller,
-            address(testErc721),
-            1 ether,
-            0,
-            1,
-            address(strategy),
-            address(weth),
-            0,
-            block.timestamp,
-            block.timestamp + 86400,
-            minPercentageAsk,
-            "",
-            0,
-            "",
-            ""
-        );
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
         signOrder(makerAsk, 1);
 
-        OrderTypes.TakerOrder memory takerBid = OrderTypes.TakerOrder(
-            false,
-            buyer,
-            1 ether,
-            0,
-            minPercentageAsk,
-            ""
-        );
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
 
         cheats.prank(seller);
         uint256[] memory orderNonces = new uint256[](1);
@@ -282,10 +248,26 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         cheats.expectRevert(bytes("Order: Matching order expired"));
         exchange.matchAskWithTakerBid(takerBid, makerAsk);
 
-        assertEq(testErc721.ownerOf(0), seller);
-        assertEq(weth.balanceOf(seller), 0);
-        assertEq(weth.balanceOf(buyer), 1 ether);
-        assertEq(weth.balanceOf(protocolFeeRecipient), 0);
-        assertEq(weth.balanceOf(royaltyFeeReceiver), 0);
+        noChangeAssertions();
+    }
+
+    function testTakerAskCancelled() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+
+        cheats.prank(buyer);
+        uint256[] memory orderNonces = new uint256[](1);
+        orderNonces[0] = 0;
+        exchange.cancelMultipleMakerOrders(orderNonces);
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Order: Matching order expired"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
     }
 }
