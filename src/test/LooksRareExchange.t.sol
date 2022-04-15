@@ -94,6 +94,12 @@ contract LooksRareExchangeTest is DSTest {
             royaltyFeeReceiver,
             150
         );
+
+        cheats.prank(buyer);
+        weth.approve(address(exchange), 1 ether);
+
+        cheats.prank(seller);
+        testErc721.approve(address(transferManagerERC721), 0);
     }
 
     function makerOrderHash(OrderTypes.MakerOrder memory makerOrder)
@@ -168,13 +174,64 @@ contract LooksRareExchangeTest is DSTest {
             ""
         );
 
-        cheats.prank(seller);
-        testErc721.approve(address(transferManagerERC721), 0);
-
-        cheats.startPrank(buyer);
-        weth.approve(address(exchange), 1 ether);
+        cheats.prank(buyer);
         exchange.matchAskWithTakerBid(takerBid, makerAsk);
-        cheats.stopPrank();
+
+        assertEq(testErc721.ownerOf(0), buyer);
+        assertEq(weth.balanceOf(seller), 0.935 ether);
+        assertEq(weth.balanceOf(buyer), 0);
+        assertEq(weth.balanceOf(protocolFeeRecipient), 0.05 ether);
+        assertEq(weth.balanceOf(royaltyFeeReceiver), 0.015 ether);
+    }
+
+    function testTakerAsk() public {
+        assertEq(testErc721.ownerOf(0), seller);
+        assertEq(weth.balanceOf(seller), 0);
+        assertEq(weth.balanceOf(buyer), 1 ether);
+        assertEq(weth.balanceOf(protocolFeeRecipient), 0);
+        assertEq(weth.balanceOf(royaltyFeeReceiver), 0);
+
+        OrderTypes.MakerOrder memory makerBid = OrderTypes.MakerOrder(
+            false,
+            buyer,
+            address(testErc721),
+            1 ether,
+            0,
+            1,
+            address(strategy),
+            address(weth),
+            0,
+            block.timestamp,
+            block.timestamp + 86400,
+            minPercentageAsk,
+            "",
+            0,
+            "",
+            ""
+        );
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                exchange.DOMAIN_SEPARATOR(),
+                makerOrderHash(makerBid)
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = cheats.sign(2, digest);
+        makerBid.v = v;
+        makerBid.r = r;
+        makerBid.s = s;
+
+        OrderTypes.TakerOrder memory takerAsk = OrderTypes.TakerOrder(
+            true,
+            seller,
+            1 ether,
+            0,
+            minPercentageAsk,
+            ""
+        );
+
+        cheats.prank(seller);
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
 
         assertEq(testErc721.ownerOf(0), buyer);
         assertEq(weth.balanceOf(seller), 0.935 ether);
