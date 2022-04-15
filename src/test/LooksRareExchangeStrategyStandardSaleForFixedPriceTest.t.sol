@@ -18,7 +18,7 @@ import {TestERC721} from "./utils/tokens/TestERC721.sol";
 import {WETH} from "./utils/tokens/WETH.sol";
 import {CheatCodes} from "./utils/CheatCodes.sol";
 
-contract LooksRareExchangeTest is DSTest {
+contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
     address private seller;
     address private buyer;
     // @dev standard hardhat addresses
@@ -79,9 +79,12 @@ contract LooksRareExchangeTest is DSTest {
 
         seller = cheats.addr(1);
         buyer = cheats.addr(2);
+
         cheats.deal(buyer, 1 ether);
-        cheats.prank(buyer);
+        cheats.startPrank(buyer);
         weth.deposit{value: 1 ether}();
+        weth.approve(address(exchange), 1 ether);
+        cheats.stopPrank();
 
         testErc721 = new TestERC721();
         testErc721.mint(seller, 0);
@@ -94,9 +97,6 @@ contract LooksRareExchangeTest is DSTest {
             royaltyFeeReceiver,
             150
         );
-
-        cheats.prank(buyer);
-        weth.approve(address(exchange), 1 ether);
 
         cheats.prank(seller);
         testErc721.approve(address(transferManagerERC721), 0);
@@ -128,6 +128,23 @@ contract LooksRareExchangeTest is DSTest {
             );
     }
 
+    function signOrder(
+        OrderTypes.MakerOrder memory makerOrder,
+        uint256 privateKey
+    ) private {
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                exchange.DOMAIN_SEPARATOR(),
+                makerOrderHash(makerOrder)
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = cheats.sign(privateKey, digest);
+        makerOrder.v = v;
+        makerOrder.r = r;
+        makerOrder.s = s;
+    }
+
     function testMakerAsk() public {
         assertEq(testErc721.ownerOf(0), seller);
         assertEq(weth.balanceOf(seller), 0);
@@ -153,17 +170,7 @@ contract LooksRareExchangeTest is DSTest {
             "",
             ""
         );
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                exchange.DOMAIN_SEPARATOR(),
-                makerOrderHash(makerAsk)
-            )
-        );
-        (uint8 v, bytes32 r, bytes32 s) = cheats.sign(1, digest);
-        makerAsk.v = v;
-        makerAsk.r = r;
-        makerAsk.s = s;
+        signOrder(makerAsk, 1);
 
         OrderTypes.TakerOrder memory takerBid = OrderTypes.TakerOrder(
             false,
@@ -209,17 +216,7 @@ contract LooksRareExchangeTest is DSTest {
             "",
             ""
         );
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                exchange.DOMAIN_SEPARATOR(),
-                makerOrderHash(makerBid)
-            )
-        );
-        (uint8 v, bytes32 r, bytes32 s) = cheats.sign(2, digest);
-        makerBid.v = v;
-        makerBid.r = r;
-        makerBid.s = s;
+        signOrder(makerBid, 2);
 
         OrderTypes.TakerOrder memory takerAsk = OrderTypes.TakerOrder(
             true,
