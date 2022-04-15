@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-import {ITransferManagerNFT} from "../interfaces/ITransferManagerNFT.sol";
+import {ITransferManagerNFT} from "./interfaces/ITransferManagerNFT.sol";
 
 /**
  * @title TransferManagerERC721
@@ -35,9 +35,11 @@ contract TransferManagerERC721 is ITransferManagerNFT {
         uint256 tokenId,
         uint256
     ) external override {
-        require(msg.sender == LOOKS_RARE_EXCHANGE, "Transfer: Only LooksRare Exchange");
+        require(
+            msg.sender == LOOKS_RARE_EXCHANGE,
+            "Transfer: Only LooksRare Exchange"
+        );
         // https://docs.openzeppelin.com/contracts/2.x/api/token/erc721#IERC721-safeTransferFrom
         IERC721(collection).safeTransferFrom(from, to, tokenId);
     }
 }
-

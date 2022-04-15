@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {OrderTypes} from "../libraries/OrderTypes.sol";
-import {IExecutionStrategy} from "../interfaces/IExecutionStrategy.sol";
+import {OrderTypes} from "./libraries/OrderTypes.sol";
+import {IExecutionStrategy} from "./interfaces/IExecutionStrategy.sol";
 
 /**
  * @title StrategyAnyItemFromCollectionForFixedPrice
@@ -26,7 +26,10 @@ contract StrategyAnyItemFromCollectionForFixedPrice is IExecutionStrategy {
      * @param makerBid maker bid order
      * @return (whether strategy can be executed, tokenId to execute, amount of tokens to execute)
      */
-    function canExecuteTakerAsk(OrderTypes.TakerOrder calldata takerAsk, OrderTypes.MakerOrder calldata makerBid)
+    function canExecuteTakerAsk(
+        OrderTypes.TakerOrder calldata takerAsk,
+        OrderTypes.MakerOrder calldata makerBid
+    )
         external
         view
         override
@@ -50,7 +53,10 @@ contract StrategyAnyItemFromCollectionForFixedPrice is IExecutionStrategy {
      * @return (whether strategy can be executed, tokenId to execute, amount of tokens to execute)
      * @dev It cannot execute but it is left for compatibility purposes with the interface.
      */
-    function canExecuteTakerBid(OrderTypes.TakerOrder calldata, OrderTypes.MakerOrder calldata)
+    function canExecuteTakerBid(
+        OrderTypes.TakerOrder calldata,
+        OrderTypes.MakerOrder calldata
+    )
         external
         pure
         override
