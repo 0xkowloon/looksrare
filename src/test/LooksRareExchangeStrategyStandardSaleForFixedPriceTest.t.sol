@@ -368,4 +368,11 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
 
         noChangeAssertions();
     }
+
+    // TODO: test incorrect token ID
+    // TODO: test invalid signature
+    // TODO: test signer
+    // TODO: test order amount > 0
+    // TODO: test fees higher than expected
+    // TODO: test taker must be sender
 }
