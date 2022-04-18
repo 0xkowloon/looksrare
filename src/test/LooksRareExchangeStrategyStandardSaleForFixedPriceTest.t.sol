@@ -408,6 +408,39 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
     // TODO: test invalid signature
     // TODO: test signer
     // TODO: test order amount > 0
+    function testMakerAsk0Amount() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        makerAsk.amount = 0;
+        signOrder(makerAsk, 1);
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+
+        cheats.prank(buyer);
+        cheats.expectRevert(bytes("Order: Amount cannot be 0"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAsk0Amount() public {
+        initialAssertions();
+
+        testErc721.mint(seller, 1);
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        makerBid.amount = 0;
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Order: Amount cannot be 0"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
     // TODO: test fees higher than expected
     // TODO: test taker must be sender
 }
