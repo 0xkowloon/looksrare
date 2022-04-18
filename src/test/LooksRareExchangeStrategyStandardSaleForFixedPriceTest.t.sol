@@ -183,6 +183,19 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         makerOrder.s = s;
     }
 
+    function invalidDomainSeparator() private returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f,
+                    0xda9101ba92939daf4bb2e18cd5f942363b9297fbc3232c9dd964abb1fb70ed71,
+                    0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6,
+                    80001, // invalid chain ID
+                    address(exchange)
+                )
+            );
+    }
+
     function initialAssertions() private {
         assertEq(testErc721.ownerOf(0), seller);
         assertEq(weth.balanceOf(seller), 0);
@@ -405,8 +418,58 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         noChangeAssertions();
     }
 
-    // TODO: test invalid signature
     // TODO: test signer
+
+    function testMakerAskInvalidSignature() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                invalidDomainSeparator(),
+                makerOrderHash(makerAsk)
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = cheats.sign(1, digest);
+        makerAsk.v = v;
+        makerAsk.r = r;
+        makerAsk.s = s;
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+
+        cheats.prank(buyer);
+        cheats.expectRevert(bytes("Signature: Invalid"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAskInvalidSignature() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                invalidDomainSeparator(),
+                makerOrderHash(makerBid)
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = cheats.sign(2, digest);
+        makerBid.v = v;
+        makerBid.r = r;
+        makerBid.s = s;
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Signature: Invalid"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
+
     function testMakerAsk0Amount() public {
         initialAssertions();
 
