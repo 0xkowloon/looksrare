@@ -369,7 +369,42 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         noChangeAssertions();
     }
 
-    // TODO: test incorrect token ID
+    function testMakerAskIncorrectTokenId() public {
+        initialAssertions();
+
+        testErc721.mint(seller, 1);
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        signOrder(makerAsk, 1);
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+        takerBid.tokenId = 1;
+
+        cheats.prank(buyer);
+        cheats.expectRevert(bytes("Strategy: Execution invalid"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAskIncorrectTokenId() public {
+        initialAssertions();
+
+        testErc721.mint(seller, 1);
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+        takerAsk.tokenId = 1;
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Strategy: Execution invalid"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
+
     // TODO: test invalid signature
     // TODO: test signer
     // TODO: test order amount > 0
