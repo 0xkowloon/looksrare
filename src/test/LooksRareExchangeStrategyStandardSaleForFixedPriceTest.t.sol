@@ -426,8 +426,6 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
     function testTakerAsk0Amount() public {
         initialAssertions();
 
-        testErc721.mint(seller, 1);
-
         OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
         makerBid.amount = 0;
         signOrder(makerBid, 2);
@@ -440,6 +438,35 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
 
         noChangeAssertions();
     }
+
     // TODO: test fees higher than expected
-    // TODO: test taker must be sender
+    function testMakerAskInvalidTaker() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        signOrder(makerAsk, 1);
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+
+        cheats.prank(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+        cheats.expectRevert(bytes("Order: Taker must be the sender"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAskInvalidTaker() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+
+        cheats.prank(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+        cheats.expectRevert(bytes("Order: Taker must be the sender"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
 }
