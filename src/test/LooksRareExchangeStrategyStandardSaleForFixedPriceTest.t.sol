@@ -29,7 +29,7 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
 
     // 5%
     uint256 private constant royaltyFeeLimit = 500;
-    uint256 private constant minPercentageAsk = 9350;
+    uint256 private constant minPercentageToAsk = 9350;
 
     CurrencyManager private currencyManager;
     StrategyStandardSaleForFixedPrice private strategy;
@@ -118,7 +118,7 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
             0,
             block.timestamp,
             block.timestamp + 86400,
-            minPercentageAsk,
+            minPercentageToAsk,
             "",
             0,
             "",
@@ -135,7 +135,7 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
             signer,
             1 ether,
             0,
-            minPercentageAsk,
+            minPercentageToAsk,
             ""
         );
     }
@@ -439,7 +439,38 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         noChangeAssertions();
     }
 
-    // TODO: test fees higher than expected
+    function testMakerAskFeesHigherThanExpected() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        makerAsk.minPercentageToAsk = 9500;
+        signOrder(makerAsk, 1);
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+
+        cheats.prank(buyer);
+        cheats.expectRevert(bytes("Fees: Higher than expected"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAskFeesHigherThanExpected() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+        takerAsk.minPercentageToAsk = 9500;
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Fees: Higher than expected"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
+
     function testMakerAskInvalidTaker() public {
         initialAssertions();
 
