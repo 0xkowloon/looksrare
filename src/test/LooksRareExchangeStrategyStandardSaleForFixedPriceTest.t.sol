@@ -418,7 +418,37 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
         noChangeAssertions();
     }
 
-    // TODO: test signer
+    function testMakerAsk0Signer() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerAsk = makerOrderStruct(true, seller);
+        makerAsk.signer = address(0);
+        signOrder(makerAsk, 1);
+
+        OrderTypes.TakerOrder memory takerBid = takerOrderStruct(false, buyer);
+
+        cheats.prank(buyer);
+        cheats.expectRevert(bytes("Order: Invalid signer"));
+        exchange.matchAskWithTakerBid(takerBid, makerAsk);
+
+        noChangeAssertions();
+    }
+
+    function testTakerAsk0Signer() public {
+        initialAssertions();
+
+        OrderTypes.MakerOrder memory makerBid = makerOrderStruct(false, buyer);
+        makerBid.signer = address(0);
+        signOrder(makerBid, 2);
+
+        OrderTypes.TakerOrder memory takerAsk = takerOrderStruct(true, seller);
+
+        cheats.prank(seller);
+        cheats.expectRevert(bytes("Order: Invalid signer"));
+        exchange.matchBidWithTakerAsk(takerAsk, makerBid);
+
+        noChangeAssertions();
+    }
 
     function testMakerAskInvalidSignature() public {
         initialAssertions();
