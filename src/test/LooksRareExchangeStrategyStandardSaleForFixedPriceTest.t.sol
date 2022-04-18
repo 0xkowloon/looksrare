@@ -407,7 +407,6 @@ contract LooksRareExchangeStrategyStandardSaleForFixedPriceTest is DSTest {
 
     // TODO: test invalid signature
     // TODO: test signer
-    // TODO: test order amount > 0
     function testMakerAsk0Amount() public {
         initialAssertions();
 
